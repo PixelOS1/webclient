@@ -116,6 +116,9 @@ class Input {
      * @param {MouseEvent} event
      */
     _mouseButtonMovement(event) {
+
+        let coord = normalizeAndQuantizeUnsigned(event.movementX, event.movementY);
+
         const down = (event.type === 'mousedown' ? 1 : 0);
         var mtype = "m";
 
@@ -134,11 +137,11 @@ class Input {
 
         if (document.pointerLockElement) {
             mtype = "m2";
-            this.x = event.movementX;
-            this.y = event.movementY;
+            this.x = coord.x;
+            this.y = coord.y;
         } else if (event.type === 'mousemove') {
-            this.x = this._clientToServerX(event.clientX);
-            this.y = this._clientToServerY(event.clientY);
+            this.x = normalizeAndQuantizeUnsigned(this._clientToServerX(event.clientX));
+            this.y = normalizeAndQuantizeUnsigned(this._clientToServerY(event.clientY));
         }
 
         if (event.type === 'mousedown' || event.type === 'mouseup') {
@@ -325,8 +328,6 @@ class Input {
         if (serverX > this.m.frameW) serverX = this.m.frameW;
         if (serverX < 0) serverX = 0;
 
-        console.log(serverX);
-
         return serverX;
     }
 
@@ -340,8 +341,6 @@ class Input {
         if (serverY === this.m.frameH - 1) serverY = this.m.frameH;
         if (serverY > this.m.frameH) serverY = this.m.frameH;
         if (serverY < 0) serverY = 0;
-
-        console.log(serverY);
 
         return serverY;
     }
@@ -489,6 +488,8 @@ class Input {
         };
 
         this._windowMath();
+
+        this.setupNormalizeAndQuantize();
     }
 
     detach() {
@@ -558,4 +559,62 @@ function addListener(obj, name, func, ctx) {
 function removeListeners(listeners) {
     for (const listener of listeners)
         listener[0].removeEventListener(listener[1], listener[2]);
+}
+
+
+/**
+ * Helper function to send mouse coordinates ue4 understands
+ */
+
+var playerElementClientRect = undefined;
+var normalizeAndQuantizeUnsigned = undefined;
+var normalizeAndQuantizeSigned = undefined;
+
+function setupNormalizeAndQuantize() {
+
+    // Unsigned XY positions are the ratio (0.0..1.0) along a viewport axis,
+    // quantized into an uint16 (0..65536).
+    // Signed XY deltas are the ratio (-1.0..1.0) along a viewport axis,
+    // quantized into an int16 (-32767..32767).
+    // This allows the browser viewport and client viewport to have a different
+    // size.
+    // Hack: Currently we set an out-of-range position to an extreme (65535)
+    // as we can't yet accurately detect mouse enter and leave events
+    // precisely inside a video with an aspect ratio which causes mattes.
+
+    // Unsigned.
+    normalizeAndQuantizeUnsigned = (x, y) => {
+        let normalizedX = x / video_container.clientWidth;
+        let normalizedY = ratio * (y / video_container.clientHeight - 0.5) + 0.5;
+        if (normalizedX < 0.0 || normalizedX > 1.0 || normalizedY < 0.0 || normalizedY > 1.0) {
+            return {
+                inRange: false,
+                x: 65535,
+                y: 65535
+            };
+        } else {
+            return {
+                inRange: true,
+                x: normalizedX * 65536,
+                y: normalizedY * 65536
+            };
+        }
+    };
+    unquantizeAndDenormalizeUnsigned = (x, y) => {
+        let normalizedX = x / 65536;
+        let normalizedY = (y / 65536 - 0.5) / ratio + 0.5;
+        return {
+            x: normalizedX * video_container.clientWidth,
+            y: normalizedY * video_container.clientHeight
+        };
+    };
+    // Signed.
+    normalizeAndQuantizeSigned = (x, y) => {
+        let normalizedX = x / (0.5 * video_container.clientWidth);
+        let normalizedY = (ratio * y) / (0.5 * video_container.clientHeight);
+        return {
+            x: normalizedX * 32767,
+            y: normalizedY * 32767
+        };
+    };
 }
