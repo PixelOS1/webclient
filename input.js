@@ -325,6 +325,8 @@ class Input {
         if (serverX > this.m.frameW) serverX = this.m.frameW;
         if (serverX < 0) serverX = 0;
 
+        console.log(serverX);
+
         return serverX;
     }
 
@@ -338,6 +340,8 @@ class Input {
         if (serverY === this.m.frameH - 1) serverY = this.m.frameH;
         if (serverY > this.m.frameH) serverY = this.m.frameH;
         if (serverY < 0) serverY = 0;
+
+        console.log(serverY);
 
         return serverY;
     }
