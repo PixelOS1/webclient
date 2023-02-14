@@ -628,6 +628,8 @@ class WebRTCDemo {
     playVideo() {
         this.element.load();
 
+        document.getElementById("capture").style.background = "#0c0726";
+
         var playPromise = this.element.play();
         if (playPromise !== undefined) {
             playPromise.then(() => {
