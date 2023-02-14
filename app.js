@@ -190,6 +190,7 @@ var app = new Vue({
         playVideo() {
             webrtc.playVideo();
             this.showStart = false;
+            document.getElementById("capture").style.background = "#0c0726";
         },
         enableClipboard() {
             navigator.clipboard.readText()
