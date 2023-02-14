@@ -1,17 +1,23 @@
-/**
- * Copyright 2019 Google LLC
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This file incorporates work covered by the following copyright and
+ * permission notice:
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   Copyright 2019 Google LLC
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
  */
 
 /*global GamepadManager*/
@@ -116,9 +122,6 @@ class Input {
      * @param {MouseEvent} event
      */
     _mouseButtonMovement(event) {
-
-        let coord = normalizeAndQuantizeUnsigned(event.movementX, event.movementY);
-
         const down = (event.type === 'mousedown' ? 1 : 0);
         var mtype = "m";
 
@@ -137,11 +140,11 @@ class Input {
 
         if (document.pointerLockElement) {
             mtype = "m2";
-            this.x = coord.x;
-            this.y = coord.y;
+            this.x = event.movementX;
+            this.y = event.movementY;
         } else if (event.type === 'mousemove') {
-            this.x = normalizeAndQuantizeUnsigned(this._clientToServerX(event.clientX));
-            this.y = normalizeAndQuantizeUnsigned(this._clientToServerY(event.clientY));
+            this.x = this._clientToServerX(event.clientX);
+            this.y = this._clientToServerY(event.clientY);
         }
 
         if (event.type === 'mousedown' || event.type === 'mouseup') {
@@ -161,6 +164,8 @@ class Input {
         ];
 
         this.send(toks.join(","));
+
+        event.preventDefault();
     }
 
     /**
@@ -488,8 +493,6 @@ class Input {
         };
 
         this._windowMath();
-
-        this.setupNormalizeAndQuantize();
     }
 
     detach() {
@@ -559,62 +562,4 @@ function addListener(obj, name, func, ctx) {
 function removeListeners(listeners) {
     for (const listener of listeners)
         listener[0].removeEventListener(listener[1], listener[2]);
-}
-
-
-/**
- * Helper function to send mouse coordinates ue4 understands
- */
-
-var playerElementClientRect = undefined;
-var normalizeAndQuantizeUnsigned = undefined;
-var normalizeAndQuantizeSigned = undefined;
-
-function setupNormalizeAndQuantize() {
-
-    // Unsigned XY positions are the ratio (0.0..1.0) along a viewport axis,
-    // quantized into an uint16 (0..65536).
-    // Signed XY deltas are the ratio (-1.0..1.0) along a viewport axis,
-    // quantized into an int16 (-32767..32767).
-    // This allows the browser viewport and client viewport to have a different
-    // size.
-    // Hack: Currently we set an out-of-range position to an extreme (65535)
-    // as we can't yet accurately detect mouse enter and leave events
-    // precisely inside a video with an aspect ratio which causes mattes.
-
-    // Unsigned.
-    normalizeAndQuantizeUnsigned = (x, y) => {
-        let normalizedX = x / video_container.clientWidth;
-        let normalizedY = ratio * (y / video_container.clientHeight - 0.5) + 0.5;
-        if (normalizedX < 0.0 || normalizedX > 1.0 || normalizedY < 0.0 || normalizedY > 1.0) {
-            return {
-                inRange: false,
-                x: 65535,
-                y: 65535
-            };
-        } else {
-            return {
-                inRange: true,
-                x: normalizedX * 65536,
-                y: normalizedY * 65536
-            };
-        }
-    };
-    unquantizeAndDenormalizeUnsigned = (x, y) => {
-        let normalizedX = x / 65536;
-        let normalizedY = (y / 65536 - 0.5) / ratio + 0.5;
-        return {
-            x: normalizedX * video_container.clientWidth,
-            y: normalizedY * video_container.clientHeight
-        };
-    };
-    // Signed.
-    normalizeAndQuantizeSigned = (x, y) => {
-        let normalizedX = x / (0.5 * video_container.clientWidth);
-        let normalizedY = (ratio * y) / (0.5 * video_container.clientHeight);
-        return {
-            x: normalizedX * 32767,
-            y: normalizedY * 32767
-        };
-    };
 }

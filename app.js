@@ -1,24 +1,30 @@
-/**
- * Copyright 2019 Google LLC
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This file incorporates work covered by the following copyright and
+ * permission notice:
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   Copyright 2019 Google LLC
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
  */
 
 // Service Worker to support PWA
 window.onload = () => {
     'use strict';
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?ts=1640937376');
+      navigator.serviceWorker.register('./sw.js?ts=CACHE_VERSION');
     }
 }
 
@@ -70,7 +76,7 @@ var app = new Vue({
                 { text: '60 fps', value: 60 },
                 { text: '100 fps', value: 100 },
             ],
-            audioEnabled: false,
+            audioEnabled: true,
             audioBitRate: 32000,
             audioBitRateOptions: [
                 { text: '32 kb/s', value: 32000 },
@@ -114,6 +120,7 @@ var app = new Vue({
             serverMemoryUsed: 0,
             serverLatency: 0,
             resizeRemote: true,
+            disableMouseLock: false,
             scaleLocal: false,
             debug: false,
             turnSwitch: false,
@@ -250,6 +257,12 @@ var app = new Vue({
             if (oldValue !== null && newValue !== oldValue) webrtc.sendDataChannelMessage('_arg_resize,' + newValue + "," + res);
             this.setBoolParam("resizeRemote", newValue);
         },
+        disableMouseLock(newValue, oldValue) {
+            if (newValue === null) return;
+            console.log("disable mouse lock changed from " + oldValue + " to " + newValue);
+            if (oldValue !== null && newValue !== oldValue) webrtc.sendDataChannelMessage('_arg_disablemouselock,' + newValue);
+            this.setBoolParam("disableMouseLock", newValue);
+        },
         scaleLocal(newValue, oldValue) {
             if (newValue === null) return;
             console.log("scaleLocal changed from " + oldValue + " to " + newValue);
@@ -286,7 +299,7 @@ var app = new Vue({
             }, 700);
         },
         appName(newValue) {
-            document.title = "PixelOS WebClient - " + newValue;
+            document.title = "Selkies - " + newValue;
         },
         showDrawer(newValue) {
             // Detach inputs when menu is shown.
@@ -299,7 +312,7 @@ var app = new Vue({
     },
 
     updated: () => {
-        document.title = "PixelOS WebClient - " + app.appName;
+        document.title = "PixelOS - Experience";
     },
 
 });
@@ -341,6 +354,7 @@ signalling.onerror = (message) => { app.logEntries.push(applyTimestamp("[signall
 signalling.ondisconnect = () => {
     console.log("signalling disconnected");
     app.status = 'connecting';
+    videoElement.style.cursor = "auto";
     webrtc.reset();
 }
 
@@ -501,6 +515,29 @@ webrtc.onclipboardcontent = (content) => {
     }
 }
 
+webrtc.oncursorchange = (handle, curdata, hotspot, override) => {
+    if (parseInt(handle) === 0) {
+        videoElement.style.cursor = "auto";
+        return;
+    }
+    if (override) {
+        videoElement.style.cursor = override;
+        return;
+    }
+    if (!webrtc.cursor_cache.has(handle)) {
+        // Add cursor to cache.
+        const cursor_url = "url('data:image/png;base64," + curdata + "')";
+        webrtc.cursor_cache.set(handle, cursor_url);
+    }
+    var cursor_url = webrtc.cursor_cache.get(handle);
+    if (hotspot) {
+        cursor_url += ` ${hotspot.x} ${hotspot.y}, auto`;
+    } else {
+        cursor_url += ", auto";
+    }
+    videoElement.style.cursor = cursor_url;
+}
+
 webrtc.onsystemaction = (action) => {
     webrtc._setStatus("Executing system action: " + action);
     if (action === 'reload') {
@@ -546,6 +583,16 @@ webrtc.onsystemaction = (action) => {
         } else {
             // Use the server setting.
             app.audioEnabled = (action.split(",")[1].toLowerCase() === 'true');
+        }
+    } else if (action.startsWith('disableMouseLock')) {
+        // Server received mouse lock enabled setting.
+        const disableMouseLockSetting = app.getBoolParam("disableMouseLock" , null);
+        if (disableMouseLockSetting !== null) {
+            // Prefer the user saved value.
+            app.disableMouseLock = disableMouseLockSetting;
+        } else {
+            // Use the server setting.
+            app.disableMouseLock = (action.split(",")[1].toLowerCase() === 'false');
         }
     } else if (action.startsWith('resize')) {
         // Remote resize enabled/disabled action.
@@ -602,21 +649,24 @@ webrtc.onsystemstats = (stats) => {
     if (stats.mem_used !== undefined) app.serverMemoryUsed = stats.mem_used;
 }
 
-navigator.permissions.query({
-    name: 'clipboard-read'
-}).then(permissionStatus => {
-    // Will be 'granted', 'denied' or 'prompt':
-    if (permissionStatus.state === 'granted') {
-        app.clipboardStatus = 'enabled';
-    }
-
-    // Listen for changes to the permission state
-    permissionStatus.onchange = () => {
+// Safari withou Permission-Api enabled fails here
+if (navigator.permissions) {
+    navigator.permissions.query({
+        name: 'clipboard-read'
+    }).then(permissionStatus => {
+        // Will be 'granted', 'denied' or 'prompt':
         if (permissionStatus.state === 'granted') {
             app.clipboardStatus = 'enabled';
         }
-    };
-});
+
+        // Listen for changes to the permission state
+        permissionStatus.onchange = () => {
+            if (permissionStatus.state === 'granted') {
+                app.clipboardStatus = 'enabled';
+            }
+        };
+    });
+}
 
 // Check if editing is allowed.
 var checkPublishing = () => {
@@ -637,7 +687,7 @@ var checkPublishing = () => {
             }
         });
 }
-checkPublishing();
+// checkPublishing();
 
 // Fetch RTC configuration containing STUN/TURN servers.
 fetch("/turn/")

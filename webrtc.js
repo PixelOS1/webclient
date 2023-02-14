@@ -1,17 +1,23 @@
-/**
- * Copyright 2019 Google LLC
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * This file incorporates work covered by the following copyright and
+ * permission notice:
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *   Copyright 2019 Google LLC
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *   Licensed under the Apache License, Version 2.0 (the "License");
+ *   you may not use this file except in compliance with the License.
+ *   You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *   Unless required by applicable law or agreed to in writing, software
+ *   distributed under the License is distributed on an "AS IS" BASIS,
+ *   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *   See the License for the specific language governing permissions and
+ *   limitations under the License.
  */
 
 /*global GamepadManager, Input*/
@@ -138,6 +144,16 @@ class WebRTCDemo {
         /**
          * @type {function}
          */
+        this.oncursorchange = null;
+
+         /**
+          * @type {Map}
+          */
+        this.cursor_cache = new Map();
+
+        /**
+         * @type {function}
+         */
         this.onsystemstats = null;
 
         // Bind signalling server callbacks.
@@ -257,6 +273,17 @@ class WebRTCDemo {
             this._setDebug("received SDP offer, creating answer");
             this.peerConnection.createAnswer()
                 .then((local_sdp) => {
+                    // Override SDP to enable stereo on WebRTC Opus with Chromium, must be munged before the Local Description
+                    if (local_sdp.sdp.indexOf('multiopus') === -1) {
+                        if (!(/[^-]stereo=1/gm.test(local_sdp.sdp))) {
+                            console.log("Overriding WebRTC SDP to allow stereo audio");
+                            if (/[^-]stereo=0/gm.test(local_sdp.sdp)) {
+                                local_sdp.sdp = local_sdp.sdp.replace('stereo=0', 'stereo=1');
+                            } else {
+                                local_sdp.sdp = local_sdp.sdp.replace('useinbandfec=', 'stereo=1;useinbandfec=');
+                            }
+                        }
+                    }
                     console.log("Created local SDP", local_sdp);
                     this.peerConnection.setLocalDescription(local_sdp).then(() => {
                         this._setDebug("Sending SDP answer");
@@ -348,6 +375,15 @@ class WebRTCDemo {
                 if (this.onclipboardcontent !== null) {
                     this.onclipboardcontent(content);
                 }
+            }
+        } else if (msg.type === 'cursor') {
+            if (this.oncursorchange !== null && msg.data !== null) {
+                var curdata = msg.data.curdata;
+                var handle = msg.data.handle;
+                var hotspot = msg.data.hotspot;
+                var override = msg.data.override;
+                this._setDebug(`received new cursor contents, handle: ${handle}, hotspot: ${JSON.stringify(hotspot)} image length: ${curdata.length}`);
+                this.oncursorchange(handle, curdata, hotspot, override);
             }
         } else if (msg.type === 'system') {
             if (msg.action !== null) {
@@ -641,6 +677,9 @@ class WebRTCDemo {
      *   3. Reconnecting to the signaling server.
      */
     reset() {
+        // Clear cursor cache.
+        this.cursor_cache = new Map();
+
         var signalState = this.peerConnection.signalingState;
         if (this._send_channel !== null && this._send_channel.readyState === "open") {
             this._send_channel.close();

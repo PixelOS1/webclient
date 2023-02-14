@@ -1,33 +1,20 @@
-/**
- * Copyright 2021 The Selkies Authors
- * Copyright 2022 PixelOS Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-/* PixelOS.com */
-
-const cacheVersion = "1640937376";
+const cacheVersion = "CACHE_VERSION";
 var cacheName = 'PWA_CACHE';
 var filesToCache = [
-  'index.html?ts=1640937376',
-  'icon-192x192.png?ts=1640937376',
-  'icon-512x512.png?ts=1640937376',
+  'index.html?ts=CACHE_VERSION',
+  'icon-192x192.png?ts=CACHE_VERSION',
+  'icon-512x512.png?ts=CACHE_VERSION',
   /* cache assets from app launcher */
-  'app.js?ts=1640937376',
-  'input.js?ts=1640937376',
-  'signalling.js?ts=1640937376',
-  'webrtc.js?ts=1640937376'
+  'app.js?ts=CACHE_VERSION',
+  'input.js?ts=CACHE_VERSION',
+  'signalling.js?ts=CACHE_VERSION',
+  'webrtc.js?ts=CACHE_VERSION'
 ];
 
 function getCacheName() {

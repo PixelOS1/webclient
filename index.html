@@ -1,3 +1,7 @@
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at https://mozilla.org/MPL/2.0/. -->
+
 <!DOCTYPE html>
 <html>
 
@@ -6,7 +10,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
   <meta name="theme-color" content="black"/>
-  
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
@@ -34,8 +37,18 @@
       right: -25px;
     }
 
+    .fab-container2 {
+      top: 50%;
+      right: 40px;
+      opacity: 50%;
+    }
+
+    .fab-container2:hover {
+      opacity: 100%;
+      right: 25px;
+    }
+
     .video-container {
-      background-color: black;
       width: 100%;
       height: 100%;
     }
@@ -65,7 +78,11 @@
     }
 
     canvas {
-      background: black;
+      background:rgba(0, 0, 0, 0) url("bg.jpg") no-repeat scroll center center / cover;
+    }
+
+    .v-btn--left {
+      left: -35px;
     }
 
     @font-face {
@@ -125,7 +142,7 @@
       direction: ltr;
     }
   </style>
-  <title>PixelOS WebClient</title>
+  <title>PixelOS Experience</title>
 </head>
 
 <body>
@@ -142,7 +159,7 @@
                       <v-progress-circular class="mx-2" v-on="on" :rotate="360" :size="50" style="font-size: 10"
                         :width="4"
                         :value="videoBitRate === 0 ? 0 : (connectionVideoBitrate / (videoBitRate / 1000))*100"
-                        color="teal">
+                        color="cyan">
                         {{ connectionVideoBitrate }}
                       </v-progress-circular>
                     </template>
@@ -264,7 +281,6 @@
                   </v-tooltip>
                 </v-toolbar>
               </p>
-              <p>PixelOS WebClient</p>
               <p>
                 <v-select :items="videoBitRateOptions" label="Video bit rate" menu-props="left" v-model="videoBitRate"
                   hint="Dynamic bit rate selection for hardware encoder on server" persistent-hint></v-select>
@@ -279,6 +295,12 @@
                   :disabled="!audioEnabled" hint="Dynamic bit rate selection for audio encoder on server"
                   persistent-hint>
                 </v-select>
+              </p>
+              <p>
+                <v-btn color="primary" v-if="!disableMouseLock" small v-on:click="disableMouseLock=true">Disable Mouse Lock</v-btn>
+                <v-btn color="primary" v-else small v-on:click="disableMouseLock=false">Enable Mouse Lock</v-btn>
+                <v-btn color="primary" v-if="!audioEnabled" small v-on:click="audioEnabled=true">Enable Audio</v-btn>
+                <v-btn color="primary" v-else small v-on:click="audioEnabled=false">Disable Audio</v-btn>
               </p>
               <p>
               <ul>
@@ -308,21 +330,19 @@
               </ul>
               </p>
               <hr />
-              <v-textarea bottom class="scrolly" label="Status Logs" readonly :value="logEntries.join('\n\n')">
+              <!--<v-textarea bottom class="scrolly" label="Status Logs" readonly :value="logEntries.join('\n\n')">
               </v-textarea>
               <v-textarea bottom class="scrolly" label="Debug Logs" readonly :value="debugEntries.join('\n\n')">
-              </v-textarea>
+              </v-textarea> -->
               <p>
-                <v-btn color="primary" v-if="!audioEnabled" small v-on:click="audioEnabled=true">Enable Audio</v-btn>
-                <v-btn color="primary" v-else small v-on:click="audioEnabled=false">Disable Audio</v-btn>
                 <v-switch v-model="resizeRemote" :label="`Resize remote to fit window: ${resizeRemote.toString()}`"></v-switch>
                 <v-switch v-model="scaleLocal" :label="`Scale to fit window: ${scaleLocal.toString()}`"></v-switch>
               </p>
-              <p>
+              <!--<p>
                 Debugging
                 <v-switch v-model="debug" :label="`Debug logs: ${debug.toString()}`"></v-switch>
                 <v-switch v-model="turnSwitch" :label="`Force relay connection: ${turnSwitch.toString()}`"></v-switch>
-              </p>
+              </p> -->
 
               <p v-if="publishingAllowed">
                 Publishing
@@ -365,7 +385,7 @@
 
       <canvas id="capture"></canvas>
 
-      <v-btn class="fab-container" v-on:click="showDrawer=!showDrawer" color="grey" fab dark fixed right>
+      <v-btn class="fab-container" v-on:click="showDrawer=!showDrawer" color="indigo" fab dark fixed right>
       </v-btn>
 
       <div class="loading">
@@ -406,15 +426,15 @@ navigator.serviceWorker.addEventListener('message', event => {
     }
 });
 </script>
-<script src="lib/webrtc-adapter-v7.7.1.js?ts=1640937376}"></script>
-<script src="lib/vue-v2.6.9.min.js?ts=1640937376}"></script>
-<script src="lib/vuetify-1.5.14.min.js?ts=1640937376}"></script>
-<script src="lib/vue-spinner-v1.0.3.min.js?ts=1640937376}"></script>
-<script src="lib/guacamole-keyboard-selkies.js?ts=1640937376}"></script>
-<script src="gamepad.js?ts=1640937376}"></script>
-<script src="input.js?ts=1640937376}"></script>
-<script src="signalling.js?ts=1640937376}"></script>
-<script src="webrtc.js?ts=1640937376}"></script>
-<script src="app.js?ts=1640937376}"></script>
+<script src="lib/webrtc-adapter-v7.7.1.js?ts=1"></script>
+<script src="lib/vue-v2.6.9.min.js?ts=1"></script>
+<script src="lib/vuetify-1.5.14.min.js?ts=1"></script>
+<script src="lib/vue-spinner-v1.0.3.min.js?ts=1"></script>
+<script src="lib/guacamole-keyboard-selkies.js?ts=1"></script>
+<script src="gamepad.js?ts=1"></script>
+<script src="input.js?ts=1"></script>
+<script src="signalling.js?ts=1"></script>
+<script src="webrtc.js?ts=1"></script>
+<script src="app.js?ts=1"></script>
 
 </html>
