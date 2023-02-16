@@ -133,8 +133,13 @@ class Input {
         }
 
         // Hotkey to enable pointer lock, CTRL-SHIFT-LeftButton
-        if (down && event.button === 0 && event.ctrlKey && event.shiftKey) {
+        if (down && event.button === 0) {
             event.target.requestPointerLock();
+            return;
+        }
+
+        if (down && event.button === 1) {
+            this._exitPointerLock();
             return;
         }
 
